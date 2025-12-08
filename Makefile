@@ -116,5 +116,13 @@ help:
 examination:
 	@echo "This is a placeholder for examination-specific targets."
 	./test.sh
+
+test2: $(TARGET)
+	@echo "Running quick test..."
+	./$(TARGET) -I -A
+
+test2-leaks: $(TARGET)
+	valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes ./$(TARGET) -I -A
+
 # Phony targets
 .PHONY: all debug sanitize release test test-leaks clean install-deps help examination
