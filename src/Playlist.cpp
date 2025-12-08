@@ -63,15 +63,15 @@ Playlist::Playlist(const Playlist& other)
 // we added an copy operator
 Playlist& Playlist::operator=(const Playlist& other) {
     if (this == &other) {
-        return *this; // הגנה מהעתקה עצמית
+        return *this; 
     }
 
-    // 1. לנקות את הפלייליסט הנוכחי (כמו ב-destructor)
+    
     PlaylistNode* current = head;
     while (current) {
         PlaylistNode* next = current->next;
 
-        delete current->track;  // ה-Playlist הוא ה-owner של ה-AudioTrack*
+        delete current->track;  
         delete current;
 
         current = next;
@@ -79,17 +79,17 @@ Playlist& Playlist::operator=(const Playlist& other) {
     head = nullptr;
     track_count = 0;
 
-    // 2. להעתיק את שם הפלייליסט
+    
     playlist_name = other.playlist_name;
 
-    // 3. לבנות מחדש רשימה ע"י clone פולימורפי של כל ה-tracks
+    
     PlaylistNode* prev_new = nullptr;
     PlaylistNode* current_other = other.head;
 
     while (current_other) {
-        // פולימורפי: קורא ל-clone של המחלקה הנגזרת המתאימה
+        
         PointerWrapper<AudioTrack> cloned = current_other->track->clone();
-        AudioTrack* track_copy = cloned.release();  // הבעלות עוברת אלינו
+        AudioTrack* track_copy = cloned.release();
 
         PlaylistNode* new_node = new PlaylistNode(track_copy);
 

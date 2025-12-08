@@ -73,7 +73,34 @@ bool DJSession::load_playlist(const std::string& playlist_name)  {
  */
 int DJSession::load_track_to_controller(const std::string& track_name) {
     // Your implementation here
-    return 0; // Placeholder
+    // (a)
+    AudioTrack* track = library_service.findTrack(track_name);
+    // (b)
+    if (track == nullptr) {
+        std::cerr << "[ERROR] Track: \"" << track_name << "\" not found in library" << std::endl;
+        stats.errors++;     
+        return 0;          
+    }
+    // (c)
+    std::cout << "[System] Loading track '" << track_name << "' to controller..." << std::endl;
+    // (d)
+    int cache_result = controller_service.loadTrackToCache(*track);
+    //(e)
+    if (cache_result == 1) {
+        // Cache HIT
+        stats.cache_hits++;
+    }
+    else if (cache_result == 0) {
+        // Cache MISS without eviction
+        stats.cache_misses++;
+    }
+    else if (cache_result == -1) {
+        // Cache MISS with eviction
+        stats.cache_misses++;
+        stats.cache_evictions++;
+    }
+    // (f)
+    return cache_result;
 }
 
 /**
@@ -85,7 +112,31 @@ int DJSession::load_track_to_controller(const std::string& track_name) {
 bool DJSession::load_track_to_mixer_deck(const std::string& track_title) {
     std::cout << "[System] Delegating track transfer to MixingEngineService for: " << track_title << std::endl;
     // your implementation here
-    return false; // Placeholder
+    // (a)
+    AudioTrack* track = controller_service.getTrackFromCache(track_title);
+    //(b)
+    if (track == nullptr) {
+        std::cerr << "[ERROR] Track: \"" << track_title << "\" not found in cache" << std::endl;
+        stats.errors++;
+        return false;
+    }
+    // (c)
+    int deck_result = mixing_service.loadTrackToDeck(*track);
+    if (deck_result == 0) {
+        stats.deck_loads_a++;     // track loaded into deck A
+        stats.transitions++;      // every successful load counts as a transition
+    }
+    else if (deck_result == 1) {
+        stats.deck_loads_b++;     // track loaded into deck B
+        stats.transitions++;
+    }
+    else if (deck_result == -1) {  // error during load
+        std::cerr << "[ERROR] Failed to load track \""  << track_title << "\" to deck" << std::endl;
+        stats.errors++;
+        return false;
+    }
+    // (d)
+    return true;
 }
 
 /**
@@ -118,7 +169,88 @@ void DJSession::simulate_dj_performance() {
 
     std::cout << "TODO: Implement the DJ performance simulation workflow here." << std::endl;
     // Your implementation here
+    //(b)
+    std::vector<std::string> playlist_names;
+    playlist_names.reserve(session_config.playlists.size());
+    for (const auto& entry : session_config.playlists) {
+        playlist_names.push_back(entry.first);
+    }
+    std::sort(playlist_names.begin(), playlist_names.end());
+
+    bool session_running = true;
+
+    while (session_running) {
+
+        std::string chosen_playlist;
+
+        if (play_all) {
+            // all-playlist mode
+            static std::size_t idx = 0;
+            if (idx >= playlist_names.size()) {
+                // if we finish to dal with all the play ist
+                break;
+            }
+            chosen_playlist = playlist_names[idx++];
+        } else {
+            // interactive mode
+            chosen_playlist = display_playlist_menu_from_config();
+            if (chosen_playlist.empty()) {
+                std::cout << "Session cancelled by user." << std::endl;
+                break;
+            }
+        }
+
+        
+        // (c) For Each Selected Playlist
+        
+
+        std::cout << "\n=== Now loading playlist: " << chosen_playlist << " ===" << std::endl;
+
+        // i. Load playlist לתוך ה-library service
+        if (!load_playlist(chosen_playlist)) {
+            std::cerr << "[ERROR] Failed to load playlist '" << chosen_playlist
+                      << "', skipping to next." << std::endl;
+            if (play_all) {
+                continue; 
+            } else {
+                // iterative mode
+                continue;
+            }
+        }
+
+        // tracks names
+        std::vector<std::string> track_titles = library_service.getTrackTitles();
+
+        
+        for (const std::string& title : track_titles) {
+            
+            std::cout << "\n-- Processing: " << title << " --" << std::endl;
+
+        
+            stats.tracks_processed++;
+
+            // Cache Loading Phase 
+            int cache_result = load_track_to_controller(title);
+            
+            bool deck_ok = load_track_to_mixer_deck(title);
+            
+            (void)cache_result;
+            (void)deck_ok;
+
+            
+        }
+
+        // summary
+        print_session_summary();
+
+        
+    }
+
+    std::cout << "\nDJ session complete. Final summary:\n";
+    print_session_summary();
+    std::cout << "Goodbye!" << std::endl;
 }
+
 
 
 /* 
