@@ -67,7 +67,6 @@ The simulator is single-threaded. No real-time audio guarantees, concurrent cach
 ## Walkthrough and history
 
 - [Start here — Hebrew](START_HERE_HE.md)
-- [Interview walkthrough — Hebrew](docs/INTERVIEW_HE.md)
 - [Changes and rationale](docs/CHANGES.md)
 - [Origin and attribution](NOTICE.md)
 
