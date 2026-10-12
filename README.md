@@ -1,223 +1,74 @@
-# DJ Session Management System - README
+# DJLab — Set Journey
 
-## Project Overview
-This is a C++ project that implements a DJ Session Management system with support for audio track management, playlists, caching, and mixing operations.
+A C++11 DJ session simulator focused on ownership, polymorphic copies and a bounded LRU cache. **Set Journey** compares the original playlist with a simple tempo-based suggestion and shows the actual cache events for both routes.
 
-## Project Structure
-```
-Skeleton/
-├── bin/                    # Compiled executables and configuration files
-│   └── dj_config.txt      # Configuration file for DJ settings
-├── include/               # Header files (.h)
-├── src/                   # Source files (.cpp)
-├── .devcontainer/         # Development container configuration
-├── Makefile              # Build system configuration
-└── README.md             # This file
-```
+This project simulates track preparation and deck transitions. It does not decode MP3/WAV files, play audio, detect beats from sound or perform real audio mixing. Waveforms are synthetic and quality scores are illustrative formulas.
 
-## Prerequisites
+## Quick start
 
-### Option 1: Using Dev Container (Recommended)
-This project includes a `.devcontainer` configuration that provides a complete development environment with all necessary tools pre-installed. If you're using Visual Studio Code with the Dev Containers extension, simply open the project and it will set everything up for you.
+Use Linux, macOS with a C++ compiler and Make, or Ubuntu in WSL on Windows. Commands run from the `DJLab` directory:
 
-### Option 2: University Lab Computers
-All required tools are pre-installed on the lab computers at BGU. You can use those directly without any setup.
-
-### Option 3: Local Installation
-If working on your own machine, you'll need:
-- A C++ compiler (g++ recommended)
-- Make build tool
-- Linux/Unix environment (or WSL on Windows)
-- Optional: valgrind (for memory leak detection)
-- Optional: gdb (for debugging)
-
-You can install these on Ubuntu/Debian with:
-```bash
-make install-deps
-```
-
-## Getting Started
-
-### 1. Getting the Project Files
-
-This project is hosted in a **Git repository**. Think of a Git repository (or "repo") as a shared folder in the cloud that contains all the project files and tracks their history.
-
-#### What is Git?
-Git is a version control system - like a powerful "undo" system for code. It lets you:
-- Download the project files (called "cloning")
-- Get updates if the instructors fix bugs or add clarifications (called "pulling")
-- Track what you've changed
-
-#### Getting the Code (Cloning)
-To get a copy of the project on your computer, you need to **clone** the repository. You'll receive a repository URL from your instructor (it looks like `https://github.com/...`).
-
-**Using VS Code**:
-1. Press `Ctrl+Shift+P` to open the Command Palette
-2. Type "Git: Clone" and select it
-3. Paste the repository URL provided by your instructor
-4. Choose where to save the project on your computer
-5. Click "Open" when prompted
-
-You only need to clone once! After that, you have all the files locally.
-
-### 2. Understanding the Build System
-This project uses **Make**, a build automation tool that compiles your code. The `Makefile` contains instructions for how to build the project.
-
-Think of Make as a recipe book for building your program. Instead of manually compiling each file, Make reads the `Makefile` and knows exactly which files to compile and in what order.
-
-### 3. Building the Project
-
-To compile the entire project, open a terminal in the `Skeleton` directory and run:
 ```bash
 make
+make demo
 ```
 
-This command will:
-- Create the `bin/` directory if it doesn't exist
-- Compile all `.cpp` files from the `src/` directory
-- Link them together
-- Create an executable called `dj_manager` in the `bin/` directory
+Open `report.html` in your browser. The included `demo-preview/set-journey.html` can also be opened directly without compiling.
 
-For a debug build (useful when developing):
 ```bash
-make debug
-```
-
-For an optimized release build:
-```bash
-make release
-```
-
-### 4. Cleaning Build Files
-
-To remove all compiled files and start fresh:
-```bash
-make clean
-```
-
-### 5. Running the Program
-
-After building, the program requires both the `-I` (interactive) and `-A` (all playlists) flags:
-
-**Running All Playlists**:
-```bash
-./bin/dj_manager -I -A
-```
-This runs the system in automatic mode, processing all available playlists sequentially.
-
-Or use the convenient test target:
-```bash
+./bin/dj_manager journey examples/night_drive.txt night-drive report.html
+./bin/dj_manager demo
+./bin/dj_manager interactive
 make test
+make sanitize
 ```
 
-**Note**: The `-I` flag enables interactive mode, while the `-A` flag processes all playlists automatically. Both flags are required for proper operation.
+`demo` and `interactive` use `bin/dj_config.txt`. The `journey` command accepts a config path, playlist name and output HTML path. The output directory must already exist. Usage errors return 2; configuration/runtime errors return 1. Old exercise CLI flags have been replaced by these commands.
 
-### 6. Checking for Memory Leaks
+## What the report demonstrates
 
-To run the program with valgrind memory leak detection:
-```bash
-make test-leaks
-```
+The example contains eight track requests and a two-slot cache. Both routes start with an empty controller cache.
 
-## Main Components
+| Metric | Original route | Suggested route |
+| --- | ---: | ---: |
+| Sum of absolute adjacent BPM changes | 98 | 22 |
+| Cache hits | 0 | 3 |
+| Cache misses | 8 | 5 |
+| Evictions | 6 | 3 |
 
-- **AudioTrack**: Base class for audio files
-- **MP3Track/WAVTrack**: Specific audio format implementations
-- **Playlist**: Manages collections of tracks
-- **LRUCache**: Implements Least Recently Used caching strategy
-- **CacheSlot**: Individual cache entry management
-- **DJSession**: Main session management
-- **DJControllerService**: Handles DJ control operations
-- **DJLibraryService**: Manages music library
-- **MixingEngineService**: Handles audio mixing operations
-- **ConfigurationManager**: Manages application settings
-- **SessionFileParser**: Parses session configuration files
+The suggestion keeps the opening track, then repeatedly chooses the nearest remaining BPM. Ties preserve input order; repeated requests remain present. If its total BPM jump exceeds the original route, the original is retained. Complexity is O(n²) time and O(n) auxiliary space. It does not claim global optimality and does not consider musical key, mood or artist variety. Consecutive repeats can improve these metrics without making a better live set.
+
+The report uses original BPM metadata, before mixer auto-sync. The mixer changes only its own clone when synchronizing. The report replays requests through `DJControllerService`; its cache numbers are not a separately simulated approximation.
+
+## Ownership and structure
+
+| Component | Owns | Borrowed pointers |
+| --- | --- | --- |
+| `DJLibraryService` | Library tracks and current playlist | `findTrack()` returns a playlist track |
+| `Playlist` | Linked-list nodes and each track | `getTracks()` and `find_track()` do not transfer ownership |
+| `LRUCache` | Slots containing `PointerWrapper<AudioTrack>` | `get()` is valid until eviction, clear, or destruction |
+| `MixingEngineService` | Independent polymorphic track clones on decks | Input track is only borrowed during loading |
+| `PointerWrapper` | One object, never an array | `get()` borrows; `release()` transfers ownership |
+
+`AudioTrack` implements the Rule of Five for its waveform buffer. Playlist copies clone every track; moves transfer nodes. `PointerWrapper` is move-only. The small cache uses vector scans: lookup, insertion and eviction selection are O(capacity), not O(1). Playlist append scans the linked list; building a playlist is O(n²). These choices keep the original structure visible and are suitable for the small included examples.
 
 ## Configuration
 
-Edit `bin/dj_config.txt` to modify DJ session settings before running the program.
+See `examples/night_drive.txt`. Library IDs must be contiguous from 1, but lines may appear out of order. Titles must be unique because the existing cache uses titles as keys. Playlist indices may repeat. Parsing is transactional: rejected input leaves the previous configuration unchanged.
 
-## Common Make Commands
+Supported ranges: cache capacity 1–1024, BPM 1–1000, duration 1–86400 seconds, MP3 bitrate 1–320, tags 0/1, WAV sample rate 1–384000 and bit depth 8/16/24/32. These are simulator bounds, not an audio-format validation specification. Commas inside fields and quoted CSV are not supported. `auto_sync` accepts true/false or 1/0.
 
-- `make` or `make all` - Build the entire project
-- `make debug` - Build with debug information for development
-- `make release` - Build optimized version for production
-- `make clean` - Remove all compiled files
-- `make test` - Build and run the program
-- `make test-leaks` - Run with valgrind to check for memory leaks
-- `make install-deps` - Install required development tools (Ubuntu/Debian)
-- `make help` - Display all available commands with descriptions
+## Verification and limits
 
-## Student Workflow
+See [validation](docs/VALIDATION.md) for actual commands and results, including the LeakSanitizer environment limitation. The suite checks ownership, deep copies, injected failures, LRU order, config rejection, deck isolation and report escaping.
 
-The recommended workflow for completing this assignment:
+The simulator is single-threaded. No real-time audio guarantees, concurrent cache access or persistent storage are provided. `PointerWrapper` is retained as an educational implementation; a production application would normally use `std::unique_ptr`. Tests cover selected failures, not every possible allocation failure. No Windows-native executable is included; compile under WSL.
 
-1. **Build with debug info**: `make debug`
-2. **Run the program**: `make test`
-3. **Find and fix TODOs** in the code
-4. **Check for memory leaks**: `make test-leaks`
-5. **Repeat** steps 3-4 until all issues are resolved!
+## Walkthrough and history
 
-## Troubleshooting
+- [Start here — Hebrew](START_HERE_HE.md)
+- [Interview walkthrough — Hebrew](docs/INTERVIEW_HE.md)
+- [Changes and rationale](docs/CHANGES.md)
+- [Origin and attribution](NOTICE.md)
 
-**Build Errors**: If you get compilation errors:
-1. Make sure all required files are present in `src/` and `include/`
-2. Check that your compiler is properly installed: `g++ --version`
-3. Try running `make clean` first, then `make`
-4. Read the error messages carefully - they usually point to the problem
-
-**Permission Errors**: If you can't execute the program:
-```bash
-chmod +x ./bin/dj_manager
-```
-
-**"Command not found" errors**: 
-- If `make` is not found, you need to install it (or use the dev container/lab computers)
-- If `valgrind` is not found for memory testing, run `make install-deps`
-
-## Development Tips
-
-1. After modifying any `.cpp` or `.h` file, run `make` to rebuild
-2. The build system automatically detects which files changed and only recompiles those
-3. Always test after making changes by rebuilding and running the program
-4. Use `make debug` during development for better error messages
-5. Run `make test-leaks` frequently to catch memory issues early
-
-## Getting Updates from Instructors
-
-During the assignment's period, your instructors may push updates, bug fixes, or clarifications to the assignment repository. While we hope there won't be any updates needed, it's good to know how to get them just in case.
-
-### Checking for and Getting Updates
-
-#### Using VS Code Interface:
-1. Open the Source Control panel (click the branch icon in the left sidebar or press `Ctrl+Shift+G`)
-2. Click the "..." menu (three dots) at the top
-3. Select **"Fetch"** to check if updates are available (this doesn't change your files yet)
-4. If updates are available, select **"Pull"** to download and apply them
-
-#### Using Terminal:
-Open the terminal (`` Ctrl+` ``) and run:
-```bash
-# Check if there are any updates
-git fetch
-
-# If updates exist, download and apply them
-git pull
-```
-
-### When to Check for Updates
-- At the start of each work session (just to be safe)
-- If your instructor announces an update via email or the course website
-- If you encounter unexpected errors that classmates don't have
-
-### What if There Are Conflicts?
-If you've modified files and there are updates, Git will usually merge them automatically. However, if there's a conflict (you and the instructor changed the same lines), Git will ask for help. In this case:
-1. Don't panic - this is rare
-2. Contact your course instructor or TA
-3. They'll help you resolve the conflict
-
-**Note**: You don't need to commit, push, or create branches for this assignment. Your main interaction with Git is just cloning once and occasionally pulling updates. Focus on writing your C++ code!
-
----
-
-For questions or issues, please contact the TA in charge on the assignment.
+The original classes and C++11 style remain: headers/sources, explicit loops, the linked playlist, Rule of Five and pointer wrapper. The additions were developed with AI assistance and should be reviewed and understood before presenting them as your own work.

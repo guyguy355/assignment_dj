@@ -2,128 +2,85 @@
 #include "AudioTrack.h"
 #include <iostream>
 #include <algorithm>
-Playlist::Playlist(const std::string& name) 
+Playlist::Playlist(const std::string& name)
     : head(nullptr), playlist_name(name), track_count(0) {
     std::cout << "Created playlist: " << name << std::endl;
 }
-// TODO: Fix memory leaks!
-// Students must fix this in Phase 1
 Playlist::~Playlist() {
-    #ifdef DEBUG
-    std::cout << "Destroying playlist: " << playlist_name << std::endl;
-    #endif
+    clear();
+}
 
-    PlaylistNode* current = head;
-
-    while (current != nullptr) {
-        PlaylistNode* next = current->next;
-
-        // ownimg model: PlaylistNode own the AudioTrack* so it's he's resposability to delete it.
-        
-        delete current->track;
-        delete current;
-
-        current = next;
+void Playlist::clear() {
+    while (head) {
+        PlaylistNode* next = head->next;
+        delete head->track;
+        delete head;
+        head = next;
     }
-
-    head = nullptr;
     track_count = 0;
 }
 
-// we added a copy constructor
 Playlist::Playlist(const Playlist& other)
-    : head(nullptr),
-      playlist_name(other.playlist_name),
-      track_count(0)
-{
-    PlaylistNode* current_other = other.head;
-    PlaylistNode* prev_new = nullptr;
-
-    while (current_other) {
-        // 1. משכפלים פולימורפית את ה־AudioTrack
-        PointerWrapper<AudioTrack> cloned = current_other->track->clone();
-        AudioTrack* track_copy = cloned.release();   // הבעלות עוברת אלינו
-
-        // 2. יוצרים node חדש ב־playlist
-        PlaylistNode* new_node = new PlaylistNode(track_copy);
-
-        if (!head) {
-            head = new_node;
-        } else {
-            prev_new->next = new_node;
+    : head(nullptr), playlist_name(other.playlist_name), track_count(0) {
+    try {
+        PlaylistNode* current = other.head;
+        while (current) {
+            PointerWrapper<AudioTrack> cloned = current->track->clone();
+            if (!cloned) throw std::runtime_error("Track clone failed");
+            add_track(cloned.release());
+            current = current->next;
         }
-
-        prev_new = new_node;
-        current_other = current_other->next;
-        ++track_count;
+    } catch (...) {
+        clear();
+        throw;
     }
 }
 
-
-// we added an copy operator
 Playlist& Playlist::operator=(const Playlist& other) {
-    if (this == &other) {
-        return *this; 
+    if (this != &other) {
+        Playlist copy(other);
+        swap(copy);
     }
-
-    
-    PlaylistNode* current = head;
-    while (current) {
-        PlaylistNode* next = current->next;
-
-        delete current->track;  
-        delete current;
-
-        current = next;
-    }
-    head = nullptr;
-    track_count = 0;
-
-    
-    playlist_name = other.playlist_name;
-
-    
-    PlaylistNode* prev_new = nullptr;
-    PlaylistNode* current_other = other.head;
-
-    while (current_other) {
-        
-        PointerWrapper<AudioTrack> cloned = current_other->track->clone();
-        AudioTrack* track_copy = cloned.release();
-
-        PlaylistNode* new_node = new PlaylistNode(track_copy);
-
-        if (!head) {
-            head = new_node;
-        } else {
-            prev_new->next = new_node;
-        }
-
-        prev_new = new_node;
-        current_other = current_other->next;
-        ++track_count;
-    }
-
     return *this;
 }
 
+Playlist::Playlist(Playlist&& other) noexcept
+    : head(other.head), playlist_name(std::move(other.playlist_name)), track_count(other.track_count) {
+    other.head = nullptr;
+    other.track_count = 0;
+}
+
+Playlist& Playlist::operator=(Playlist&& other) noexcept {
+    if (this != &other) {
+        clear();
+        head = other.head;
+        playlist_name = std::move(other.playlist_name);
+        track_count = other.track_count;
+        other.head = nullptr;
+        other.track_count = 0;
+    }
+    return *this;
+}
+
+void Playlist::swap(Playlist& other) noexcept {
+    std::swap(head, other.head);
+    playlist_name.swap(other.playlist_name);
+    std::swap(track_count, other.track_count);
+}
 
 void Playlist::add_track(AudioTrack* track) {
-    if (!track) {
-        std::cout << "[Error] Cannot add null track to playlist" << std::endl;
-        return;
+    if (!track) return;
+    PointerWrapper<AudioTrack> owned(track);
+    PlaylistNode* new_node = new PlaylistNode(owned.get());
+    owned.release();
+    if (!head) {
+        head = new_node;
+    } else {
+        PlaylistNode* current = head;
+        while (current->next) current = current->next;
+        current->next = new_node;
     }
-
-    // Create new node - this allocates memory!
-    PlaylistNode* new_node = new PlaylistNode(track);
-
-    // Add to front of list
-    new_node->next = head;
-    head = new_node;
-    track_count++;
-
-    std::cout << "Added '" << track->get_title() << "' to playlist '" 
-              << playlist_name << "'" << std::endl;
+    ++track_count;
 }
 
 void Playlist::remove_track(const std::string& title) {
@@ -174,9 +131,9 @@ void Playlist::display() const {
         });
 
         AudioTrack* track = current->track;
-        std::cout << index << ". " << track->get_title() 
+        std::cout << index << ". " << track->get_title()
                   << " by " << artist_list
-                  << " (" << track->get_duration() << "s, " 
+                  << " (" << track->get_duration() << "s, "
                   << track->get_bpm() << " BPM)" << std::endl;
         current = current->next;
         index++;

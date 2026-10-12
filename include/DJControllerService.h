@@ -22,10 +22,10 @@ public:
     // Output: An integer indicating the result: 1 for HIT, 0 for MISS without eviction, -1 for MISS with eviction.
     int loadTrackToCache(AudioTrack& track);
 
+    void displayCacheStatus() const;
 
     // Contract: Display cache status (LRU order and occupancy)
     // - Intended for debugging and interactive inspection
-    void displayCacheStatus() const; // TODO: Implement
 
     /**
      * @brief Set the cache size for the LRUCache.

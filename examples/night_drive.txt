@@ -1,0 +1,12 @@
+# Set Journey demo. Track metadata is fictional; no audio files are required.
+app_name=DJLab
+version=1.0
+library_track_1=MP3,First Light,{DJLab;},210,118,320,1
+library_track_2=WAV,Neon Sprint,{DJLab;},240,140,48000,24
+library_track_3=MP3,Coastline,{DJLab;},200,122,256,1
+library_track_4=WAV,After Hours,{DJLab;},260,132,44100,16
+library_track_5=MP3,Blue Room,{DJLab;},190,125,320,1
+controller_cache_size=2
+bpm_tolerance=8
+auto_sync=true
+night-drive=1,2,3,1,4,5,2,3

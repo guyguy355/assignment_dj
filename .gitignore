@@ -1,0 +1,8 @@
+/build/
+/bin/dj_manager
+/bin/*.o
+/report.html
+*.dSYM/
+.vscode/
+.idea/
+.DS_Store

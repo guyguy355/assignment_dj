@@ -1,8 +1,11 @@
 #include "LRUCache.h"
 #include <iostream>
+#include <stdexcept>
 
 LRUCache::LRUCache(size_t capacity)
-    : slots(capacity), max_size(capacity), access_counter(0) {}
+    : slots(capacity), max_size(capacity), access_counter(0) {
+    if (capacity == 0) throw std::invalid_argument("Cache capacity must be positive");
+}
 
 bool LRUCache::contains(const std::string& track_id) const {
     return findSlot(track_id) != max_size;
@@ -11,12 +14,10 @@ bool LRUCache::contains(const std::string& track_id) const {
 AudioTrack* LRUCache::get(const std::string& track_id) {
     size_t idx = findSlot(track_id);
     if (idx == max_size) return nullptr;
+
     return slots[idx].access(++access_counter);
 }
 
-/**
- * TODO: Implement the put() method for LRUCache
- */
 bool LRUCache::put(PointerWrapper<AudioTrack> track) {
     if (!track) {
         return false;
@@ -27,9 +28,9 @@ bool LRUCache::put(PointerWrapper<AudioTrack> track) {
         if (slots[i].isOccupied()) {
             AudioTrack* existing = slots[i].getTrack();
             if (existing && existing->get_title() == incoming->get_title()) {
-                
+
                 slots[i].access(++access_counter);
-                return false;  
+                return false;
             }
         }
     }
@@ -38,16 +39,14 @@ bool LRUCache::put(PointerWrapper<AudioTrack> track) {
 
     size_t empty_index = findEmptySlot();
     if (empty_index == max_size) {
-        
+
         evictLRU();
         eviction_happened = true;
-        empty_index = findEmptySlot();   
+        empty_index = findEmptySlot();
     }
 
-    
     slots[empty_index].store(std::move(track), ++access_counter);
 
-    
     return eviction_happened;
 }
 
@@ -71,15 +70,19 @@ void LRUCache::clear() {
 }
 
 void LRUCache::displayStatus() const {
-    std::cout << "[LRUCache] Status: " << size() << "/" << max_size << " slots used\n";
+    std::cout << "\n=== Cache Status ===" << std::endl;
+    std::cout << "[LRUCache] Status: " << size() << "/" << max_size << " slots used" << std::endl;
     for (size_t i = 0; i < max_size; ++i) {
+        std::cout <<"  Slot " << i << ": ";
         if(slots[i].isOccupied()){
-            std::cout << "  Slot " << i << ": " << slots[i].getTrack()->get_title()
-                      << " (last access: " << slots[i].getLastAccessTime() << ")\n";
+            std::cout << slots[i].getTrack()->get_title()
+                      << " (last access: " << slots[i].getLastAccessTime() << ")";
         } else {
-            std::cout << "  Slot " << i << ": [EMPTY]\n";
+            std::cout << "[EMPTY]";
         }
+        std::cout << std::endl;
     }
+     std::cout << "====================" << std::endl;
 }
 
 size_t LRUCache::findSlot(const std::string& track_id) const {
@@ -90,21 +93,19 @@ size_t LRUCache::findSlot(const std::string& track_id) const {
 
 }
 
-/**
- * TODO: Implement the findLRUSlot() method for LRUCache
- */
 size_t LRUCache::findLRUSlot() const {
-    int index = max_size;
-    long min_time = 0; 
+    size_t index = max_size;
+    uint64_t min_time = 0;
 
-    for( int i = 0; i< max_size; i ++){
-        if (slots[i].isOccupied()){
-            if (min_time == 0 || slots[i].getLastAccessTime() < min_time){
-                min_time = slots[i].getLastAccessTime();
+     for (size_t i = 0; i < max_size; ++i) {
+        if (slots[i].isOccupied()) {
+            uint64_t access_time = slots[i].getLastAccessTime();
+            if (min_time == 0 || access_time < min_time) {
+                min_time = access_time;
                 index = i;
             }
         }
-    }
+        }
     return index;
 }
 
@@ -115,11 +116,16 @@ size_t LRUCache::findEmptySlot() const {
     return max_size;
 }
 
-void LRUCache::set_capacity(size_t capacity){
-    if (max_size == capacity)
-        return;
-    //udpate max size
+void LRUCache::set_capacity(size_t capacity) {
+    if (capacity == 0) throw std::invalid_argument("Cache capacity must be positive");
+    if (capacity == max_size) return;
+    // Allocate first, so allocation failure leaves this cache unchanged.
+    std::vector<CacheSlot> resized(capacity);
+    while (size() > capacity) evictLRU();
+    size_t next = 0;
+    for (size_t i = 0; i < max_size; ++i) {
+        if (slots[i].isOccupied()) resized[next++] = std::move(slots[i]);
+    }
+    slots.swap(resized);
     max_size = capacity;
-    //update the slots vector
-    slots.resize(capacity);
 }

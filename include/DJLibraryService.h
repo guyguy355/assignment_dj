@@ -8,7 +8,6 @@
 #include <string>
 
 // Service responsible for managing the track library and playlists
-// Phase 4 behavior alignment:
 // - Load library tracks from config file
 // - Build playlists from track indices referencing the library
 class DJLibraryService {
@@ -16,6 +15,8 @@ public:
     DJLibraryService(const Playlist& playlist);
     DJLibraryService(): playlist(), library(){}
      ~DJLibraryService();
+    DJLibraryService(const DJLibraryService&) = delete;
+    DJLibraryService& operator=(const DJLibraryService&) = delete;
     /**
      * @brief Build the track library from parsed config data
      * @param library_tracks Vector of track info from config
@@ -32,7 +33,6 @@ public:
     // Returns a reference to the loaded playlist
     Playlist& getPlaylist();
 
-    // Display all playlists in the library (debug aid; optional for Phase 4)
     void displayLibrary() const;
 
     /**

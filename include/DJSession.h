@@ -4,21 +4,16 @@
 #include "DJControllerService.h"
 #include "MixingEngineService.h"
 #include "SessionFileParser.h"
-#include "ConfigurationManager.h"
 #include <string>
 #include <vector>
 
-/**
- * @brief DJ Controller Memory Statistics
- * Phase 4: Track how memory is used in the DJ controller simulation
- */
 struct ControllerStats {
     size_t tracks_in_controller;      // Tracks currently loaded in controller memory
     size_t total_tracks_processed;    // Total tracks that passed through controller
     size_t memory_slots_used;         // How many memory slots are occupied
     size_t tracks_evicted;            // How many tracks were removed due to memory limits
-    
-    ControllerStats() : tracks_in_controller(0), total_tracks_processed(0), 
+
+    ControllerStats() : tracks_in_controller(0), total_tracks_processed(0),
                        memory_slots_used(0), tracks_evicted(0) {}
 };
 
@@ -34,9 +29,8 @@ private:
     DJLibraryService library_service;
     DJControllerService controller_service;
     MixingEngineService mixing_service;
-    
+
     // Configuration and session state
-    ConfigurationManager config_manager;
     SessionConfig session_config;
     std::vector<std::string> track_titles;
     bool play_all;
@@ -68,7 +62,6 @@ public:
 
     // ========== ORCHESTRATION METHODS ==========
 
-
     /**
      * Contract: Load playlist into the session library
      * - Input: playlist name (key from session config)
@@ -95,22 +88,19 @@ public:
      */
     void simulate_dj_performance();
 
-
     // ========== STATUS & DISPLAY METHODS ==========
 
     const std::string& get_session_name() const { return session_name; }
 
-    // TODO: Add more status and display methods as needed, delegating to services
-
 private:
-    // ========== PROVIDED HELPER METHODS (Menu and Config) ==========
-    
+    // ========== HELPER METHODS (Menu and Config) ==========
+
     /**
      * @brief Load configuration from bin/dj_config.txt
      * @return true if configuration loaded successfully
      */
     bool load_configuration();
-    
+
     /**
      * @brief Display available playlists from config and prompt user to select one
      * @return Selected playlist name, or empty string if cancelled

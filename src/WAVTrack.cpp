@@ -1,38 +1,31 @@
 #include "WAVTrack.h"
 #include <iostream>
 
-WAVTrack::WAVTrack(const std::string& title, const std::vector<std::string>& artists, 
+WAVTrack::WAVTrack(const std::string& title, const std::vector<std::string>& artists,
                    int duration, int bpm, int sample_rate, int bit_depth)
     : AudioTrack(title, artists, duration, bpm), sample_rate(sample_rate), bit_depth(bit_depth) {
 
     std::cout << "WAVTrack created: " << sample_rate << "Hz/" << bit_depth << "bit" << std::endl;
 }
 
-// ========== TODO: STUDENTS IMPLEMENT THESE VIRTUAL FUNCTIONS ==========
-
 void WAVTrack::load() {
-    // TODO: Implement realistic WAV loading simulation
-    // NOTE: Use exactly 2 spaces before the arrow (→) character
-    // a
+
     std::cout << "[WAVTrack::load] Loading WAV: \""
               << get_title() << "\" at "
               << sample_rate << "Hz/"
               << bit_depth << "bit (uncompressed)..."
               << std::endl;
 
-    // b
-    long long duration = duration_seconds; 
+    long long duration = duration_seconds;
     long long sr       = sample_rate;
     long long bd       = bit_depth;
 
     long long size_bytes =
-        duration * sr * (bd / 8) * 2;   
+        duration * sr * (bd / 8) * 2;
 
-    // c
     std::cout << "    -> Estimated file size: "
               << size_bytes << " bytes" << std::endl;
 
-    // d
     std::cout << "    -> Fast loading due to uncompressed format."
               << std::endl;
 
@@ -40,24 +33,17 @@ void WAVTrack::load() {
 
 void WAVTrack::analyze_beatgrid() {
     std::cout << "[WAVTrack::analyze_beatgrid] Analyzing beat grid for: \"" << title << "\"\n";
-    // TODO: Implement WAV-specific beat detection analysis
-    // Requirements:
     // 1. Print analysis message with track title
     // 2. Calculate beats: (duration_seconds / 60.0) * bpm
     // 3. Print number of beats and mention uncompressed precision
-    // should print "  → Estimated beats: <beats>  → Precision factor: 1.0 (uncompressed audio)"
-    
-    // b
+
     double beats = (static_cast<double>(duration_seconds) / 60.0) * bpm;
-    // c
+
     std::cout << "  → Estimated beats: " << beats
               << "  → Precision factor: 1 (uncompressed audio)" << std::endl;
 }
 
 double WAVTrack::get_quality_score() const {
-    // TODO: Implement WAV quality scoring
-    // NOTE: Use exactly 2 spaces before each arrow (→) character
-    // NOTE: Cast beats to integer when printing
      double score = 70.0;
 
     if (sample_rate >= 44100)
@@ -76,10 +62,9 @@ double WAVTrack::get_quality_score() const {
         score = 100.0;
 
     return score;
-   
+
 }
 
 PointerWrapper<AudioTrack> WAVTrack::clone() const {
-    // TODO: Implement the clone method
     return PointerWrapper<AudioTrack>(new WAVTrack(*this));
 }

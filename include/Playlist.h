@@ -5,18 +5,8 @@
 #include <string>
 #include <vector>
 
-/**
- * ⚠️  WARNING: THIS CLASS HAS INTENTIONAL MEMORY LEAKS! ⚠️
- * 
- * This is Phase 1 of the assignment - students must identify and fix all memory leaks.
- * @todo Implement proper memory management to prevent leaks.
- * @note In phase 4, the library service should provide canonical ownership semantics
- * for tracks referenced by playlists. Fixes in earlier phases should ensure
- * clear ownership and safe iteration without leaks.
- */
-
 struct PlaylistNode {
-    AudioTrack* track; 
+    AudioTrack* track;
     PlaylistNode* next;
 
     PlaylistNode(AudioTrack* t) : track(t), next(nullptr) {}
@@ -39,16 +29,20 @@ public:
      * Destructor
      */
     ~Playlist();
-    
-    // playlists are non-copyable (linked list of borrowing nodes)
-    Playlist(const Playlist& other);            
-    Playlist& operator=(const Playlist& other); // 
+
+    // Owns tracks. Copies clone each track; moves transfer the linked list.
+    Playlist(const Playlist& other);
+    Playlist& operator=(const Playlist& other); //
 
     /**
      * Add a track to the playlist
-     * @param track Pointer to AudioTrack to add
+     * @param track Owned pointer. Ownership transfers on entry, including allocation failure.
      */
     void add_track(AudioTrack* track);
+    Playlist(Playlist&& other) noexcept;
+    Playlist& operator=(Playlist&& other) noexcept;
+    void swap(Playlist& other) noexcept;
+    void clear();
 
     /**
      * Remove a track by title
@@ -91,7 +85,5 @@ public:
     std::vector<AudioTrack*> getTracks() const;
 
 };
-
-
 
 #endif // PLAYLIST_H
